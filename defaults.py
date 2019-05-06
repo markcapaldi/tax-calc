@@ -15,7 +15,7 @@ DEFAULT_DATA = {
             'range_start': 31786,
             'range_end': 150000
         },
-        'top_rate': None,
+        'top_rate': None
     },
     2016: {
         'personal_allowance': 11000,
@@ -31,7 +31,7 @@ DEFAULT_DATA = {
             'range_start': 32001,
             'range_end': 150000
         },
-        'top_rate': None,
+        'top_rate': None
     },
     2017: {
         'personal_allowance': 11500,
@@ -47,7 +47,7 @@ DEFAULT_DATA = {
             'range_start': 31501,
             'range_end': 150000
         },
-        'top_rate': None,
+        'top_rate': None
     },
     2018: {
         'personal_allowance': 11850,
@@ -75,6 +75,6 @@ DEFAULT_DATA = {
             'rate': 46,
             'range_start': 150000,
             'range_end': None
-        },
-    },
+        }
+    }
 }
