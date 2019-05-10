@@ -5,20 +5,15 @@ import json
 
 from unittest.mock import patch, mock_open
 
-from CalculateTax import IncomeTaxData
+from CalculateTax import IncomeTaxYearData
 from defaults import DEFAULT_DATA
 
 
-class TestIncomeTaxData(unittest.TestCase):
+class TestIncomeTaxYearData(unittest.TestCase):
 
-    @patch(
-        "builtins.open",
-        new_callable=mock_open,
-        read_data=json.dumps(DEFAULT_DATA)
-    )
-    def test_init_valid_json(self, mock_file):
+    def test_init_valid_json(self):
         year = 2016
-        year_data = IncomeTaxData(year)
+        year_data = IncomeTaxYearData(DEFAULT_DATA[year], 30000)
         self.assertEqual(
             year_data.personal_allowance,
             DEFAULT_DATA[year]['personal_allowance']
@@ -43,6 +38,15 @@ class TestIncomeTaxData(unittest.TestCase):
             year_data.top_rate,
             DEFAULT_DATA[year]['top_rate']
         )
+        self.assertEqual(year_data.personal_allowance, 11000)
+
+    def test_init_unexpected_valid_json(self):
+        with self.assertLogs(level='ERROR') as cm:
+            IncomeTaxYearData({'foo': 'bar'}, 30000)
+        self.assertEqual(cm.output, [
+            'ERROR:root:Personal Allowance data is missing or corrupt, please '
+            'try reseting tax data using -r parameter.'
+        ])
 
 
 if __name__ == '__main__':
