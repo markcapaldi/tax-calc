@@ -1,7 +1,7 @@
 TAX_DATA_FILE_NAME = "tax_data.json"
 
 DEFAULT_DATA = {
-    2015: {
+    '2015': {
         'personal_allowance': 10600,
         'starter_rate': None,
         'basic_rate': {
@@ -17,7 +17,7 @@ DEFAULT_DATA = {
         },
         'top_rate': None
     },
-    2016: {
+    '2016': {
         'personal_allowance': 11000,
         'starter_rate': None,
         'basic_rate': {
@@ -33,7 +33,7 @@ DEFAULT_DATA = {
         },
         'top_rate': None
     },
-    2017: {
+    '2017': {
         'personal_allowance': 11500,
         'starter_rate': None,
         'basic_rate': {
@@ -49,7 +49,7 @@ DEFAULT_DATA = {
         },
         'top_rate': None
     },
-    2018: {
+    '2018': {
         'personal_allowance': 11850,
         'starter_rate': {
             'rate': 19,

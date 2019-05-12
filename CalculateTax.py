@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import argparse
+import datetime
 import json
 import locale
 import logging
@@ -9,16 +10,45 @@ from functools import reduce
 
 from defaults import DEFAULT_DATA, TAX_DATA_FILE_NAME
 
+locale.setlocale(locale.LC_ALL, '')
+
+
+def _validate_year(value):
+    """
+    Validating user input for year to be a valid year
+    """
+    ivalue = int(value)
+    if (
+        ivalue <= 0 or
+        ivalue >= datetime.datetime.now().year + 1
+    ):
+        raise argparse.ArgumentTypeError(
+            "%s is an invalid year value" % value
+        )
+    return ivalue
+
+
+def _validate_salary(value):
+    """
+    Validating user input for salary to be a positive integer
+    """
+    ivalue = int(value)
+    if ivalue <= 0:
+        raise argparse.ArgumentTypeError(
+            "%s is an invalid salary value" % value
+        )
+    return ivalue
+
 
 class IncomeTaxYearData:
     """
-    Object containing tax data and calculations,
+    Object containing tax data and calculated variables based on gross salary,
 
     init params:
-        year_tax_data(required): tax data for a particular year in a dict form
-        gross_salary: salary used to calculate variable portions
-                                of tax deductions like personal allowance and
-                                tax deductions per band.
+        year_tax_data: tax data for a particular year in a dict form
+        gross_salary: salary used to calculate variable portions of tax
+                      deductions like personal allowance and tax deductions
+                      per band.
     """
     PERSONAL_ALLOWANCE = 'personal_allowance'
 
@@ -28,57 +58,61 @@ class IncomeTaxYearData:
     HIGHER_RATE = 'higher_rate'
     TOP_RATE = 'top_rate'
 
-    GROSS_SALARY_LABEL = 'Gross Salary: {gross_salary}\n'
-    TAXABLE_INCOME_LABEL = 'Taxable Income: {taxable_income}\n'
-    PERSONAL_ALLOWANCE_LABEL = 'Personal Allowance: {personal_allowance}\n'
+    GROSS_SALARY_LABEL = 'Gross Salary: {gross_salary}'
+    TAXABLE_INCOME_LABEL = 'Taxable Income: {taxable_income}'
+    PERSONAL_ALLOWANCE_LABEL = 'Personal Allowance: {personal_allowance}'
 
     BANDS = {
         STARTER_RATE:
-            'Starter Rate: {amount} @ {rate}%\n',
+            'Starter Rate: {amount} @ {rate}%',
         BASIC_RATE:
-            'Basic Rate: {amount} @ {rate}%\n',
+            'Basic Rate: {amount} @ {rate}%',
         INTERMEDIATE_RATE:
-            'Intermediate Rate: {amount} @ {rate}%\n',
+            'Intermediate Rate: {amount} @ {rate}%',
         HIGHER_RATE:
-            'Higher Rate: {amount} @ {rate}%\n',
+            'Higher Rate: {amount} @ {rate}%',
         TOP_RATE:
-            'Top Rate: {amount} @ {rate}%\n',
+            'Top Rate: {amount} @ {rate}%',
     }
 
     def __init__(self, year_tax_data, gross_salary):
-        def _get_rate_obj(band_dict, band):
-            if band_dict is not None:
-                return TaxBand(band_dict, band)
-            else:
-                return None
+        if year_tax_data is None:
+            raise ValueError("year_tax_data can't be null")
+
+        if gross_salary is None:
+            raise ValueError("gross_salary can't be null")
+
         try:
             self.personal_allowance = year_tax_data['personal_allowance']
         except KeyError:
-            logging.error('Personal Allowance data is missing or corrupt, '
-                          'please try reseting tax data using -r parameter.')
-            return
+            msg = ('Personal Allowance data is missing or corrupt, '
+                   'please try reseting tax data using -r parameter.')
+            raise ValueError(msg)
 
         self.gross_salary = gross_salary
         self.taxable_income = self.gross_salary - self.personal_allowance
 
-
-        salary_remainder = self.taxable_income
         for rate in self.BANDS:
-            setattr(
-                self, rate, _get_rate_obj(year_tax_data[rate], rate)
-            )
-            rate_attr = getattr(self, rate)
-            if rate_attr:
-                if rate_attr.range_end and salary_remainder > 0:
-                    salary_remainder -= (
-                        rate_attr.range_end - rate_attr.range_start
-                    )
+            if year_tax_data.get(rate) and year_tax_data[rate] is not None:
+                setattr(self, rate, TaxBand(year_tax_data, gross_salary, rate))
+            else:
+                setattr(self, rate, None)
 
-                    rate_attr.range_amount = salary_remainder
-                    rate_attr.band_deduction = (
-                        (rate_attr.rate * salary_remainder) / 100.0
-                    )
-            setattr(self, rate, rate_attr)
+    def add(self, *args, **kwargs):
+        """Add Tax Data for a year"""
+        return self.edit(self, *args, **kwargs)
+
+    def edit(self, *args, **kwargs):
+        """Edit Tax Data for a year"""
+        raise NotImplementedError
+
+    def delete(self, *args, **kwargs):
+        """Delete Tax Data for a year"""
+        raise NotImplementedError
+
+    def save(self, *args, **kwargs):
+        """Save the data from the object into the JSON file."""
+        raise NotImplementedError
 
     def _reset_tax_data():
         """Populate JSON file with default data"""
@@ -86,15 +120,11 @@ class IncomeTaxYearData:
         with open(TAX_DATA_FILE_NAME, 'w') as outfile:
             json.dump(DEFAULT_DATA, outfile)
 
-    def _add_tax_year_data():
-        """Add Tax Data to the JSON file"""
-        raise NotImplementedError
-
     def get_gross_salary_label(self):
         logging.debug('Getting Formated Gross Salary')
         return self.GROSS_SALARY_LABEL.format(
             gross_salary=locale.currency(self.gross_salary, grouping=True)
-        )
+        ) + '\n'
 
     def get_personal_allowance_label(self):
         logging.debug('Getting Formated Personal Allowance')
@@ -102,13 +132,13 @@ class IncomeTaxYearData:
             personal_allowance=locale.currency(
                 self.personal_allowance, grouping=True
             )
-        )
+        ) + '\n'
 
     def get_taxable_income_label(self):
         logging.debug('Getting Formated Taxable Income')
         return self.TAXABLE_INCOME_LABEL.format(
             taxable_income=locale.currency(self.taxable_income, grouping=True)
-        )
+        ) + '\n'
 
     def get_band_label(self, rate):
         logging.debug('Getting Formated %s', rate)
@@ -129,13 +159,13 @@ class IncomeTaxYearData:
                             grouping=True
                         )
                     )
-                )
+                ) + '\n'
         else:
             return None
 
     def get_tax_due_label(self):
         return (
-            '\nTotal Tax Due: ' +
+            'Total Tax Due: ' +
             locale.currency(
                 reduce(
                     lambda x, y: x + y,
@@ -145,7 +175,7 @@ class IncomeTaxYearData:
                     ]
                 ),
                 grouping=True
-            )
+            ) + '\n'
         )
 
     def get_breakdown(self):
@@ -174,12 +204,12 @@ class TaxBand:
     """
     Tax Band object containing information for a particular tax band
     """
-    def __init__(self, band_dict, band):
+    def __init__(self, year_tax_data, gross_salary, band):
         logging.debug('Initializing TaxBand %s', band)
         self.name = band
-        self.rate = band_dict['rate']
-        self.range_start = band_dict['range_start']
-        self.range_end = band_dict['range_end']
+        self.rate = year_tax_data[band]['rate']
+        self.range_start = year_tax_data[band]['range_start']
+        self.range_end = year_tax_data[band]['range_end']
         self.range_amount = 0
         self.band_deduction = 0
 
@@ -192,10 +222,10 @@ class TaxBand:
 
 
 def main():
-    # Setting up environment
-
-    locale.setlocale(locale.LC_ALL, '')
-
+    """
+    Main function thread setting up the argument parsing and directing the flow
+    of the application.
+    """
     help_text = '''Calculate the amount of Income tax due in a given tax year
     for a given salary and provide a breakdown of the tax bands.'''
 
@@ -216,11 +246,11 @@ def main():
 
     parser.add_argument(
         "tax_year",
-        help="tax year for which to calculate tax", type=int
+        help="tax year for which to calculate tax", type=_validate_year
     )
     parser.add_argument(
         "gross_income",
-        help="gross income for the year", type=int
+        help="gross income for the year", type=_validate_salary
     )
 
     args = parser.parse_args()
