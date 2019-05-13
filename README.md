@@ -6,8 +6,13 @@ Requirements:
     python3
 
 Installation:
+It is highly recomended to wortk in a python virtual environment.
 
-    sudo apt install python3-pip
+    sudo apt install python3-pip python-dev gcc
+    sudo pip3 install virtualenv 
+    virtualenv -p /usr/bin/python3 tax-venv
+    source tax-venv/bin/activate
+    pip install coverage
 
 Usage:
 
@@ -27,3 +32,15 @@ optional arguments:
     -v, --verbose  increase output verbosity
   
     -r, --reset    reset tax data to defaults
+    
+    
+To run tests call:
+    
+    coverage run tests.py
+    
+To update coverage report run:
+
+    coverage html
+    
+To view the coverage report open index.html in /htmlcov folder.
+
